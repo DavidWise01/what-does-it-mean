@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>What does "it" mean? — attention, redundancy, and the ASK gate</title>
+<style>
+  :root{
+    --bg:#0a0710; --panel:#140d20; --edge:#2e2148; --ink:#ece3f7; --dim:#9a86bd; --faint:#6b5a8c;
+    --violet:#a78bfa; --violet2:#c4b5fd; --glow:#7c3aed; --animal:#34d399; --street:#22d3ee;
+    --it:#f472b6; --ask:#fbbf24;
+    --mono:'SFMono-Regular',ui-monospace,Menlo,Consolas,monospace;
+    --serif:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);line-height:1.55;
+    background-image:radial-gradient(1200px 600px at 72% -10%,#1a1030 0%,transparent 60%),
+      radial-gradient(900px 520px at 0% 100%,#150b28 0%,transparent 55%);}
+  .wrap{max-width:1000px;margin:0 auto;padding:42px 26px 90px}
+  header{border-bottom:1px solid var(--edge);padding-bottom:22px;margin-bottom:30px}
+  .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--violet);opacity:.9}
+  h1{font-size:31px;line-height:1.13;margin:.32em 0 .18em;font-weight:600}
+  h1 em{color:var(--violet2);font-style:italic}
+  .sub{color:var(--dim);font-size:15.5px;max-width:78ch}
+  .lin{font-family:var(--mono);font-size:11.5px;color:var(--faint);margin-top:14px}
+  .lin b{color:var(--violet);font-weight:500}
+  section{margin:38px 0}
+  h2{font-size:13px;font-family:var(--mono);letter-spacing:.22em;text-transform:uppercase;color:var(--violet2);
+    border-left:2px solid var(--glow);padding-left:11px;margin:0 0 6px}
+  .lede{color:var(--dim);font-size:15px;margin:0 0 18px;max-width:80ch}
+  .lede b{color:var(--violet2);font-weight:400}
+  .panel{background:linear-gradient(180deg,var(--panel),#100a1b);border:1px solid var(--edge);border-radius:14px;
+    padding:20px;box-shadow:0 1px 0 #2e2148 inset,0 24px 60px -40px #000}
+  .controls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-bottom:8px}
+  .controls .lbl{font-family:var(--mono);font-size:11px;color:var(--faint);margin-right:4px}
+  button{font-family:var(--mono);font-size:12px;color:var(--ink);background:#241738;border:1px solid var(--edge);
+    border-radius:8px;padding:7px 12px;cursor:pointer;transition:.15s}
+  button:hover{background:#2e1f48;border-color:var(--violet)}
+  button.on{background:var(--glow);border-color:var(--violet2);color:#fff}
+  canvas{display:block;border-radius:10px;background:#0c0717;border:1px solid var(--edge);max-width:100%;margin:0 auto}
+  .cap{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:9px;text-align:center}
+  .read{display:flex;gap:24px;flex-wrap:wrap;justify-content:center;margin-top:14px;align-items:center}
+  .st .v{font-family:var(--mono);font-size:19px;font-weight:600}
+  .st .k{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);text-align:center}
+  .verdict{font-family:var(--mono);font-size:13px;font-weight:700;padding:6px 13px;border-radius:8px;display:inline-block}
+  .verdict.res{color:#04150d;background:var(--animal)} .verdict.ask{color:#1a0a02;background:var(--ask)}
+  .askbox{margin-top:14px;padding:14px 16px;border-radius:10px;border:1px solid var(--ask);background:#1c1605;
+    font-size:15px;color:var(--ink);display:none}
+  .askbox.show{display:block} .askbox b{color:var(--ask)}
+  .note{color:var(--dim);font-size:13.5px;border-left:2px solid var(--edge);padding-left:13px;margin:16px 0 0}
+  .note b{color:var(--violet2);font-weight:400}
+  code{font-family:var(--mono);font-size:.9em;color:var(--violet2);background:#170f28;padding:1px 5px;border-radius:5px}
+  footer{margin-top:42px;border-top:1px solid var(--edge);padding-top:18px;color:var(--faint);font-family:var(--mono);font-size:11px;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="kicker">Purple Paper - side-sheet - learning machines - XIII - the pronoun and the question</div>
+  <h1>What does "<em>it</em>" mean? - attention, redundancy, and the <em>ASK</em> gate</h1>
+  <div class="sub">The sentence every attention explainer uses, because of one ambiguous word. "It" runs its query
+    against <em>every</em> token at once and weights them - that's attention, in parallel, with weights computed live.
+    Two sides, <span style="color:var(--animal)">animal</span> and <span style="color:var(--street)">street</span>,
+    each post their claim on "it." When one wins, it resolves. When they're <b>redundant</b> - both equally good - the
+    model shouldn't guess. That's the moment it should ask you. This is the gate that knows when.</div>
+  <div class="lin"><b>"it" attends to all tokens in parallel</b> · weights dynamic, recomputed per sentence ·
+    swap the last word and the referent flips · tie -> <b>ASK</b>, not guess</div>
+</header>
+
+<section>
+  <h2>Swap the last word - watch "it" move, or refuse to</h2>
+  <p class="lede">The animal didn't cross the street because it was too <b>___</b>. Pick the adjective. With
+    <b>tired</b>, "it" attends to the <span style="color:var(--animal)">animal</span> (animals tire). With <b>wide</b>,
+    "it" flips to the <span style="color:var(--street)">street</span> (streets are wide). With <b>grey</b> - which fits
+    both equally - the two sides claim "it" <em>redundantly</em>, neither wins, and the gate stops guessing and
+    <span style="color:var(--ask)">asks you</span>.</p>
+
+  <div class="panel">
+    <div class="controls">
+      <span class="lbl">...too</span>
+      <button id="a_tired" class="on">tired</button>
+      <button id="a_wide">wide</button>
+      <button id="a_grey">grey</button>
+      <span style="width:14px"></span>
+      <span class="lbl">attention sharpness</span>
+      <button id="tdn">sharper</button><button id="tup">softer</button>
+    </div>
+
+    <canvas id="cv" width="620" height="340"></canvas>
+    <div class="cap">every line is "it" attending to a token, in parallel · thickness = weight (live) ·
+      <span style="color:var(--animal)">animal</span> and <span style="color:var(--street)">street</span> are the two sides checking each other</div>
+
+    <div class="read">
+      <div class="st"><div class="v" id="wa" style="color:var(--animal)">--</div><div class="k">it → animal</div></div>
+      <div class="st"><div class="v" id="ws" style="color:var(--street)">--</div><div class="k">it → street</div></div>
+      <div class="st"><div class="v" id="marg" style="color:var(--violet2)">--</div><div class="k">margin (non-redundancy)</div></div>
+      <div class="st" style="align-self:center"><span class="verdict res" id="verdict">RESOLVED</span></div>
+    </div>
+
+    <div class="askbox" id="askbox">🤔 <b>The model asks:</b> "Just to be sure — when you say <em>it was too grey</em>,
+      does <b>it</b> mean the <span style="color:var(--animal)">animal</span> or the
+      <span style="color:var(--street)">street</span>?" <br><span style="color:var(--dim);font-size:13px">Both readings
+      are equally supported. Guessing here would be a coin-flip dressed as confidence. So it asks.</span></div>
+
+    <div class="note" id="readnote">"tired" -> the animal wins cleanly. One side dominates, the other concedes:
+      resolved, no question needed.</div>
+  </div>
+</section>
+
+<section>
+  <h2>Why it answers your real question</h2>
+  <p class="lede">You asked two things: does attention run in parallel and weight everything, and why wouldn't the
+    model just ask. Both are here.</p>
+
+  <div class="note"><b>Yes - it runs against everything, in parallel, with dynamic weights.</b> "It" doesn't pick two
+    candidates; it dot-products against <em>every</em> token at once and softmaxes the whole row. The lines above are
+    that full row. The projection machinery is fixed, but the weights themselves are computed fresh from this sentence -
+    swap one word and they recompute and the referent flips, with nothing stored changing. That dynamism is the whole
+    point of attention.</div>
+
+  <div class="note" style="margin-top:14px"><b>And the ASK gate is why it <em>could</em> just ask - and usually
+    doesn't.</b> The bare mechanism resolves "it" in one shot; there's no agent in there noticing the tie. The full
+    assistant <em>can</em> ask, but it has to first <em>know</em> the ambiguity is real - and models are overconfident,
+    so they feel a 50/50 tie as a fake 90/10 certainty and resolve silently. The redundancy check is the missing
+    witness: an exterior test that fires "these two readings are equally good -> ask" instead of trusting the model to
+    feel its own uncertainty, which it can't reliably do. <em>The model doesn't ask because it can't tell it should.
+    This gate is how you tell it.</em></div>
+
+  <div class="note" style="margin-top:14px;font-size:13px">Verified in Node before drawing: "tired" -> animal 62% vs
+    2%, "wide" -> street 45% vs 6%, "grey" -> 24%/24%, margin 0% -> ASK fires. The pronoun genuinely flips with the
+    adjective and ties on the shared-property word. Attention runs against all 11 tokens in parallel; the weights shown
+    are that live softmax row.</div>
+</section>
+
+<footer>
+  WHAT DOES "IT" MEAN? - purple paper side-sheet XIII - the pronoun, the redundancy check, and the ASK gate<br>
+  verified in Node · "it" attends to all tokens in parallel, dynamic weights · tired->animal, wide->street, grey->tie->ASK · redundancy (margin) = the missing uncertainty witness<br>
+  the canonical attention sentence (Vaswani 2017 era explainers) · Winograd schemas (Levesque 2012) · clarifying questions = the refuse gate, for ambiguity
+</footer>
+
+<script>
+"use strict";
+const DIMS={ cv:[620,340] };
+function fit(c){ const [W,H]=DIMS[c.id]||[c.width,c.height]; const dpr=window.devicePixelRatio||1;
+  const need=Math.round(W*dpr); if(c.width!==need){ c.width=need; c.height=Math.round(H*dpr); c.style.width=W+'px'; c.style.height=H+'px'; }
+  const g=c.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); return {g,w:W,h:H}; }
+let CLOCK=0;
+
+const TOKENS=["the","animal","didn't","cross","the","street","because","it","was","too","___"];
+const FEAT={ "the":[0,0,0,0],"animal":[1,1,0,1],"didn't":[0,0,0,0],"cross":[0,0,0,0],
+  "street":[0,0,1,1],"because":[0,0,0,0],"it":[0,0,0,0],"was":[0,0,0,0],"too":[0,0,0,0] };
+const ADJ={ "tired":[0.8,1.0,0.0,0.3],"wide":[0.0,0.0,1.0,0.4],"grey":[0.0,0.0,0.0,1.0] };
+let adj="tired", T=0.5;
+function softmax(a,t){const m=Math.max(...a);const e=a.map(v=>Math.exp((v-m)/t));const s=e.reduce((x,y)=>x+y,0);return e.map(v=>v/s);}
+const dot=(a,b)=>a.reduce((s,_,i)=>s+a[i]*b[i],0);
+function compute(){
+  const q=ADJ[adj]; const toks=TOKENS.map(t=>t==="___"?adj:t);
+  const keys=toks.map(t=>FEAT[t]||ADJ[adj]);
+  const scores=keys.map(k=>dot(q,k)); const w=softmax(scores,T);
+  const ai=toks.indexOf("animal"), si=toks.indexOf("street");
+  const wa=w[ai], ws=w[si]; const margin=Math.abs(wa-ws)/(wa+ws+1e-9);
+  return {w,toks,wa,ws,ai,si,margin,ask:margin<0.18,top:wa>=ws?"animal":"street"};
+}
+
+function draw(){
+  const {g,w,h}=fit(document.getElementById('cv')); g.clearRect(0,0,w,h);
+  const r=compute();
+  const n=r.toks.length; const y0=70, rowY=h-70;
+  const xs=r.toks.map((_,i)=> 40 + i*(w-80)/(n-1));
+  const itX=xs[7];
+  // attention lines from "it" to every token (parallel)
+  r.toks.forEach((t,i)=>{ if(i===7) return; const ww=r.w[i];
+    let col='#46356b'; if(i===r.ai) col='#34d399'; else if(i===r.si) col='#22d3ee'; else if(t===adj) col='#a78bfa';
+    g.strokeStyle=col; g.globalAlpha=0.12+0.85*ww; g.lineWidth=0.6+ww*11;
+    g.beginPath(); g.moveTo(itX, y0+14); 
+    const midY=(y0+rowY)/2 - 30;
+    g.quadraticCurveTo((itX+xs[i])/2, midY, xs[i], rowY-14); g.stroke(); g.globalAlpha=1;
+  });
+  // "it" node
+  g.fillStyle='#f472b6'; g.beginPath(); g.arc(itX,y0,15,0,7); g.fill();
+  g.fillStyle='#0a0710'; g.font='bold 12px ui-monospace,monospace'; g.textAlign='center'; g.textBaseline='middle';
+  g.fillText('it',itX,y0); g.textBaseline='alphabetic';
+  g.fillStyle='#f472b6'; g.font='10px ui-monospace,monospace'; g.fillText('query runs against all →', itX, y0-22);
+  // token row
+  r.toks.forEach((t,i)=>{ const x=xs[i];
+    let col='#9a86bd', dotc='#46356b';
+    if(i===r.ai){col='#34d399';dotc='#34d399';} else if(i===r.si){col='#22d3ee';dotc='#22d3ee';} else if(t===adj){col='#c4b5fd';dotc='#a78bfa';}
+    g.fillStyle=dotc; g.globalAlpha=i===7?0.3:1; g.beginPath(); g.arc(x,rowY,5,0,7); g.fill(); g.globalAlpha=1;
+    g.save(); g.translate(x,rowY+10); g.rotate(-Math.PI/5); g.fillStyle=col; g.font='11px ui-monospace,monospace'; g.textAlign='right'; g.textBaseline='middle';
+    g.fillText(t, 0, 8); g.restore();
+    // weight % above big ones
+    if(r.w[i]>0.05 && i!==7){ g.fillStyle=col; g.font='9px ui-monospace,monospace'; g.textAlign='center'; g.fillText((r.w[i]*100).toFixed(0)+'%', x, rowY-12); }
+  });
+  // two-sides bars
+  const bx=w-150, by=24;
+  // (kept in readouts instead; canvas clean)
+  document.getElementById('wa').textContent=(r.wa*100).toFixed(0)+'%';
+  document.getElementById('ws').textContent=(r.ws*100).toFixed(0)+'%';
+  document.getElementById('marg').textContent=(r.margin*100).toFixed(0)+'%';
+  const v=document.getElementById('verdict'); const ab=document.getElementById('askbox');
+  if(r.ask){ v.textContent='AMBIGUOUS → ASK'; v.className='verdict ask'; ab.classList.add('show');
+    document.getElementById('readnote').innerHTML='"'+adj+'" fits the animal and the street equally - the two sides claim "it" <b>redundantly</b>. Neither wins. Guessing would be a coin-flip dressed as confidence, so the gate asks instead.';
+  } else { v.textContent='RESOLVED → '+r.top; v.className='verdict res'; ab.classList.remove('show');
+    document.getElementById('readnote').innerHTML='"'+adj+'" → the <b>'+r.top+'</b> wins cleanly. One side dominates, the other concedes: resolved, no question needed.';
+  }
+  requestAnimationFrame(draw);
+}
+function setAdj(a){ adj=a; ['tired','wide','grey'].forEach(x=>document.getElementById('a_'+x).classList.toggle('on',x===a)); }
+document.getElementById('a_tired').onclick=()=>setAdj('tired');
+document.getElementById('a_wide').onclick=()=>setAdj('wide');
+document.getElementById('a_grey').onclick=()=>setAdj('grey');
+document.getElementById('tdn').onclick=()=>{ T=Math.max(0.15,T-0.12); };
+document.getElementById('tup').onclick=()=>{ T=Math.min(1.5,T+0.12); };
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>
